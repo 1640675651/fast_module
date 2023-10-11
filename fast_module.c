@@ -25,9 +25,11 @@ static int sekvm_shmem_close(struct inode *inode, struct file *file)
 
 static int sekvm_shmem_mmap(struct file *filp, struct vm_area_struct *vma)
 {
-	u64 size = get_registered_size();
+	unsigned long size = vma->vm_end - vma->vm_start;
 	u64 base_phys = get_shmem_base();
 	int ret;
+	printk(KERN_ERR "[SeKVM_KM] sekvm_shmem_mmap size = %lu\n", size);
+	printk(KERN_ERR "[SeKVM_KM] sekvm_shmem_mmap base = %llu\n", base_phys);
 	if(size == 0)
 	{
 		printk(KERN_ERR "[SeKVM_KM] No shared memory is registered. Aborting mmap\n");
@@ -37,6 +39,7 @@ static int sekvm_shmem_mmap(struct file *filp, struct vm_area_struct *vma)
 	if(ret < 0)
 	{
 		printk(KERN_ERR "[SeKVM_KM] mmap failed\n");
+		return -1;
 	}
 	printk(KERN_ERR "[SeKVM_KM] sekvm_shmem file mmaped.\n");
 	return 0;
