@@ -51,9 +51,10 @@ static int sekvm_shmem_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	unsigned long size = vma->vm_end - vma->vm_start;
 	u64 base_phys = get_shmem_base();
+	int ret;
 	shmem_vma = vma;
 	shmem_size = size;
-	int ret;
+	
 	printk(KERN_ERR "[SeKVM_KM] sekvm_shmem_mmap size = %lu\n", size);
 	printk(KERN_ERR "[SeKVM_KM] sekvm_shmem_mmap base = %llu\n", base_phys);
 	if(size == 0)
