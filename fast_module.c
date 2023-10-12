@@ -15,6 +15,7 @@ struct sekvm_shmem_data_struct
 vm_area_struct *vma;
 int shmem_size;
 struct list_head * mylist;
+bool is_active_map;
 };
 
 
@@ -25,23 +26,32 @@ static int sekvm_shmem_open(struct inode *inode, struct file *file)
 	struct sekvm_shmem_data_struct *sekvm_shmem_data = kmalloc(sizeof(sekvm_shmem_data_struct));
 	if(!sekvm_shmem_mutex.trylock()) {
 		printk(KERN_ERR "sekvm_shmem is already mapped. Aborting mmap\n");
+		file->private_data->is_active_map = false;
 		return -EBUSY;
 	}
 	file->private_data = sekvm_shmem_data;
+	file->private_data->is_active_map = true;
+
 	printk(KERN_ERR "sekvm_shmem file opened.\n");
 	return 0;
 }
 
 static int sekvm_shmem_close(struct inode *inode, struct file *file)
 {
-	struct mm_struct *mm = current->mm;
-	unmap_single_vma(struct mmu_gather *tlb,
-		file->private_data->vma,
-		file->private_data->vma->vm_start,
-		file->private_data->vma->vm_start + file->private_data->size,
-		NULL)
-	kfree(file->private_data);
-	sekvm_shmem_mutex.unlock();
+	struct mmu_notifier_range range;
+	struct mmu_gather tlb;
+	if (file->private_data->is_active_map){
+		mmu_notifier_range_init(&range, MMU_NOTIFY_CLEAR, 0, file->private_data->vma, file->private_data->vma->vm_mm,
+					file->private_data->vma->vm_start, file->private_data->vma->vm_start + file->private_data->shmem_size);
+		tlb_gather_mmu(&tlb, vma->vm_mm, start, range.end);
+		unmap_single_vma(&tlb,
+			file->private_data->vma,
+			file->private_data->vma->vm_start,
+			file->private_data->vma->vm_start + file->private_data->size,
+			NULL)
+		kfree(file->private_data);
+		sekvm_shmem_mutex.unlock();
+	}
 	printk(KERN_ERR "sekvm_shmem file closed.\n");
 	return 0;
 }
