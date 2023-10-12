@@ -20,15 +20,12 @@ unsigned long shmem_size;
 DEFINE_MUTEX(sekvm_shmem_mutex);
 static int sekvm_shmem_open(struct inode *inode, struct file *file)
 {
-	int is_map;
 	if(mutex_trylock(&sekvm_shmem_mutex)) {
 		printk(KERN_ERR "sekvm_shmem is already mapped. Aborting mmap\n");
-		is_map = 0;
 		file->private_data = is_map; //is not active map
 
 		return -EBUSY;
 	}
-	is_map = 1;
 	file->private_data = is_map; //is active map
 
 	printk(KERN_ERR "sekvm_shmem file opened.\n");
