@@ -20,13 +20,16 @@ unsigned long shmem_size;
 DEFINE_MUTEX(sekvm_shmem_mutex);
 static int sekvm_shmem_open(struct inode *inode, struct file *file)
 {
+	bool *is_map;
 	if(mutex_trylock(&sekvm_shmem_mutex)) {
 		printk(KERN_ERR "sekvm_shmem is already mapped. Aborting mmap\n");
-		file->private_data = false; //is not active map
+		is_map = false;
+		file->private_data = is_map; //is not active map
 
 		return -EBUSY;
 	}
-	file->private_data = true; //is active map
+	is_map = true;
+	file->private_data = is_map; //is active map
 
 	printk(KERN_ERR "sekvm_shmem file opened.\n");
 	return 0;
@@ -37,7 +40,7 @@ static int sekvm_shmem_close(struct inode *inode, struct file *file)
 
 	if(file->private_data) {
 		vm_munmap(shmem_vma->vm_start, shmem_size);
-		sekvm_shmem_mutex.unlock();
+		mutex_unlock(&sekvm_shmem_mutex);
 	}
 	
 	printk(KERN_ERR "sekvm_shmem file closed.\n");
@@ -47,9 +50,9 @@ static int sekvm_shmem_close(struct inode *inode, struct file *file)
 static int sekvm_shmem_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	unsigned long size = vma->vm_end - vma->vm_start;
+	u64 base_phys = get_shmem_base();
 	shmem_vma = vma;
 	shmem_size = size;
-	u64 base_phys = get_shmem_base();
 	int ret;
 	printk(KERN_ERR "[SeKVM_KM] sekvm_shmem_mmap size = %lu\n", size);
 	printk(KERN_ERR "[SeKVM_KM] sekvm_shmem_mmap base = %llu\n", base_phys);
