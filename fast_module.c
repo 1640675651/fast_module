@@ -11,8 +11,8 @@
 //#include <asm/kvm_host.h>
 #include <kvm/shmem_guest.h>
 
-struct vm_area_struct *shmem_vma;
-int shmem_size;
+int shmem
+unsigned long shmem_size;
 
 
 
@@ -34,17 +34,9 @@ static int sekvm_shmem_open(struct inode *inode, struct file *file)
 
 static int sekvm_shmem_close(struct inode *inode, struct file *file)
 {
-	struct mmu_notifier_range range;
-	struct mmu_gather tlb;
+
 	if(file->private_data) {
-		mmu_notifier_range_init(&range, MMU_NOTIFY_CLEAR, 0, shmem_vma, shmem_vma->vm_mm,
-					shmem_vma->vm_start, shmem_vma->vm_start + shmem_size);
-		tlb_gather_mmu(&tlb, shmem_vma->vm_mm, shmem_vma->vm_start, range.end);
-		unmap_single_vma(&tlb,
-			shmem_ma,
-			shmem_vma->vm_start,
-			shmem_vma->vm_start + shmem_size,
-			NULL)
+		vm_munmap(shmem_vma->vm_start, shmem_size);
 		sekvm_shmem_mutex.unlock();
 	}
 	
