@@ -5,6 +5,8 @@
 #include <linux/cdev.h>
 #include <linux/device.h>
 #include <linux/mm.h>
+#include<pthread.h>
+
 #include <asm/io.h>
 #include <linux/slab.h>
 
@@ -16,15 +18,15 @@ struct vm_area_struct *vma;
 int shmem_size;
 struct list_head * mylist;
 bool is_active_map;
-}
+};
 
 
 
 DEFINE_MUTEX(sekvm_shmem_mutex);
 static int sekvm_shmem_open(struct inode *inode, struct file *file)
 {
-	struct sekvm_shmem_data_struct *sekvm_shmem_data = kmalloc(sizeof(struct sekvm_shmem_data_struct));
-	if(!sekvm_shmem_mutex.try_lock()) {
+	struct sekvm_shmem_data_struct *sekvm_shmem_data = kmalloc(sizeof(struct sekvm_shmem_data_struct),);
+	if(mutex_trylock((&sekvm_shmem_mutex)) {
 		printk(KERN_ERR "sekvm_shmem is already mapped. Aborting mmap\n");
 		file->private_data->is_active_map = false;
 		return -EBUSY;
