@@ -11,7 +11,7 @@
 //#include <asm/kvm_host.h>
 #include <kvm/shmem_guest.h>
 
-int shmem
+struct vm_area_struct* shmem_vma;
 unsigned long shmem_size;
 
 
