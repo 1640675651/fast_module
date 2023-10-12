@@ -12,19 +12,19 @@
 #include <kvm/shmem_guest.h>
 struct sekvm_shmem_data_struct
 {
-vm_area_struct *vma;
+struct vm_area_struct *vma;
 int shmem_size;
 struct list_head * mylist;
 bool is_active_map;
-};
+}
 
 
 
 DEFINE_MUTEX(sekvm_shmem_mutex);
 static int sekvm_shmem_open(struct inode *inode, struct file *file)
 {
-	struct sekvm_shmem_data_struct *sekvm_shmem_data = kmalloc(sizeof(sekvm_shmem_data_struct));
-	if(!sekvm_shmem_mutex.trylock()) {
+	struct sekvm_shmem_data_struct *sekvm_shmem_data = kmalloc(sizeof(struct sekvm_shmem_data_struct));
+	if(!sekvm_shmem_mutex.try_lock()) {
 		printk(KERN_ERR "sekvm_shmem is already mapped. Aborting mmap\n");
 		file->private_data->is_active_map = false;
 		return -EBUSY;
