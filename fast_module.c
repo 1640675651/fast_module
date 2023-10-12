@@ -5,34 +5,28 @@
 #include <linux/cdev.h>
 #include <linux/device.h>
 #include <linux/mm.h>
-#include<pthread.h>
 
 #include <asm/io.h>
-#include <linux/slab.h>
 
 //#include <asm/kvm_host.h>
 #include <kvm/shmem_guest.h>
-struct sekvm_shmem_data_struct
-{
-struct vm_area_struct *vma;
+
+struct vm_area_struct *shmem_vma;
 int shmem_size;
-struct list_head * mylist;
-bool is_active_map;
-};
+
 
 
 
 DEFINE_MUTEX(sekvm_shmem_mutex);
 static int sekvm_shmem_open(struct inode *inode, struct file *file)
 {
-	struct sekvm_shmem_data_struct *sekvm_shmem_data = kmalloc(sizeof(struct sekvm_shmem_data_struct),);
-	if(mutex_trylock((&sekvm_shmem_mutex)) {
+	if(mutex_trylock(&sekvm_shmem_mutex)) {
 		printk(KERN_ERR "sekvm_shmem is already mapped. Aborting mmap\n");
-		file->private_data.is_active_map = false;
+		file->private_data = false; //is not active map
+
 		return -EBUSY;
 	}
-	file->private_data = sekvm_shmem_data;
-	file->private_data.is_active_map = true;
+	file->private_data = true; //is active map
 
 	printk(KERN_ERR "sekvm_shmem file opened.\n");
 	return 0;
@@ -42,18 +36,18 @@ static int sekvm_shmem_close(struct inode *inode, struct file *file)
 {
 	struct mmu_notifier_range range;
 	struct mmu_gather tlb;
-	if (file->private_data->is_active_map){
-		mmu_notifier_range_init(&range, MMU_NOTIFY_CLEAR, 0, file->private_data->vma, file->private_data->vma->vm_mm,
-					file->private_data->vma->vm_start, file->private_datavma->vm_start + file->private_data->shmem_size);
-		tlb_gather_mmu(&tlb, vma->vm_mm, start, range.end);
+	if(file->private_data) {
+		mmu_notifier_range_init(&range, MMU_NOTIFY_CLEAR, 0, shmem_vma, shmem_vma->vm_mm,
+					shmem_vma->vm_start, shmem_vma->vm_start + shmem_size);
+		tlb_gather_mmu(&tlb, shmem_vma->vm_mm, shmem_vma->vm_start, range.end);
 		unmap_single_vma(&tlb,
-			file->private_data->vma,
-			file->private_data->vma->vm_start,
-			file->private_data->vma->vm_start + file->private_data->size,
+			shmem_ma,
+			shmem_vma->vm_start,
+			shmem_vma->vm_start + shmem_size,
 			NULL)
-		kfree(file->private_data);
 		sekvm_shmem_mutex.unlock();
 	}
+	
 	printk(KERN_ERR "sekvm_shmem file closed.\n");
 	return 0;
 }
@@ -61,8 +55,8 @@ static int sekvm_shmem_close(struct inode *inode, struct file *file)
 static int sekvm_shmem_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	unsigned long size = vma->vm_end - vma->vm_start;
-	filp->private_data->vma = vma;
-	filp->private_data->size = size;
+	shmem_vma = vma;
+	shmem_size = size;
 	u64 base_phys = get_shmem_base();
 	int ret;
 	printk(KERN_ERR "[SeKVM_KM] sekvm_shmem_mmap size = %lu\n", size);
