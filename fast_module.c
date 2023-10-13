@@ -13,21 +13,18 @@
 
 struct vm_area_struct* shmem_vma;
 unsigned long shmem_size;
+bool shmem_is_open = false;
 
 
 
 
-DEFINE_MUTEX(sekvm_shmem_mutex);
 static int sekvm_shmem_open(struct inode *inode, struct file *file)
 {
-	if(mutex_trylock(&sekvm_shmem_mutex)) {
+	if(shmem_is_open) {
 		printk(KERN_ERR "sekvm_shmem is already mapped. Aborting mmap\n");
-		file->private_data = is_map; //is not active map
-
 		return -EBUSY;
 	}
-	file->private_data = is_map; //is active map
-
+	shmem_is_open = true;
 	printk(KERN_ERR "sekvm_shmem file opened.\n");
 	return 0;
 }
@@ -35,10 +32,8 @@ static int sekvm_shmem_open(struct inode *inode, struct file *file)
 static int sekvm_shmem_close(struct inode *inode, struct file *file)
 {
 
-	if(file->private_data) {
-		vm_munmap(shmem_vma->vm_start, shmem_size);
-		mutex_unlock(&sekvm_shmem_mutex);
-	}
+	vm_munmap(shmem_vma->vm_start, shmem_size);
+	shmem_is_open = false;	
 	
 	printk(KERN_ERR "sekvm_shmem file closed.\n");
 	return 0;
