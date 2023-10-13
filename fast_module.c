@@ -20,7 +20,7 @@ unsigned long shmem_size;
 DEFINE_MUTEX(sekvm_shmem_mutex);
 static int sekvm_shmem_open(struct inode *inode, struct file *file)
 {
-	if(mutex_trylock(&sekvm_shmem_mutex)) {
+	if(mutex_trylock(&sekvm_shmem_mutex) == 0) {
 		printk(KERN_ERR "sekvm_shmem is already mapped. Aborting mmap\n");
 		return -EBUSY;
 	}
@@ -32,9 +32,8 @@ static int sekvm_shmem_open(struct inode *inode, struct file *file)
 static int sekvm_shmem_close(struct inode *inode, struct file *file)
 {
 
-	vm_munmap(shmem_vma->vm_start, shmem_size);
+	//vm_munmap(shmem_vma->vm_start, shmem_size);
 	mutex_unlock(&sekvm_shmem_mutex);
-	
 	
 	printk(KERN_ERR "sekvm_shmem file closed.\n");
 	return 0;
@@ -50,9 +49,9 @@ static int sekvm_shmem_mmap(struct file *filp, struct vm_area_struct *vma)
 	
 	printk(KERN_ERR "[SeKVM_KM] sekvm_shmem_mmap size = %lu\n", size);
 	printk(KERN_ERR "[SeKVM_KM] sekvm_shmem_mmap base = %llu\n", base_phys);
-	if(size == 0)
+	if(size < get_registered_size())
 	{
-		printk(KERN_ERR "[SeKVM_KM] No shared memory is registered. Aborting mmap\n");
+		printk(KERN_ERR "[SeKVM_KM] Not enough shared memory. Aborting mmap\n");
 		return -1;
 	}
 	ret = remap_pfn_range(vma, vma->vm_start, __phys_to_pfn(base_phys), size, vma->vm_page_prot);
